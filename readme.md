@@ -14,9 +14,13 @@ Clone DNSweeper repo
 
 `$ git clone https://github.com/MMquant/DNSweeper.git`
 
+Install python headers (needed for pycares)
+
+`$ apt install python3.7-dev`
+
 Install dependencies from `requirements.txt`:
 
-`$ pip3 install requirements.txt`
+`$ pip3 install -r requirements.txt`
 
 ## Introduction
 
@@ -327,6 +331,7 @@ results/
 
 * optimize code for Windows (maximum count of opened file descriptors)
 * tune-up resolvers filtering - adding more filters, upgrade current filtering
+* upgrade installation process (create package?)
 
 ## Contribution
 
