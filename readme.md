@@ -22,6 +22,8 @@ Install dependencies from `requirements.txt`:
 
 `$ pip3 install -r requirements.txt`
 
+Read OS [optimization instructions](#optimization) for best performance
+
 ## Introduction
 
 Main help screen
@@ -327,7 +329,9 @@ results/
   ...
 ```
 
-## Linux optimization
+## <a name="optimization"></a>Optimization
+
+### Linux
 
 In order to get DNSweeper working properly you should tune-up your OS so that it can handle thousands of outgoing TCP connections reliably.
 
@@ -354,7 +358,13 @@ You might need restart your system after making these changes. To check if you c
 
 `$ ulimit -Hn`
 
-which should be > 25000.
+which should be >=25000.
+
+### VMware
+
+Quit VMware completely and upgrade to the latest VMware virtual NIC by editing `ethernet0.virtualDev` directive in your `<vmware_image>.vmx` file.
+
+`ethernet0.virtualDev = "vmxnet3"` ([reference](https://kb.vmware.com/s/article/1001805))
 
 ## ToDo
 
