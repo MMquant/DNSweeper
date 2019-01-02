@@ -366,12 +366,12 @@ Quit VMware completely and upgrade to the latest VMware virtual NIC by editing `
 
 `ethernet0.virtualDev = "vmxnet3"` ([reference](https://kb.vmware.com/s/article/1001805))
 
-
 ## ToDo
 
 * optimize code for Windows (maximum count of opened file descriptors)
 * tune-up resolvers filtering - adding more filters, upgrade current filtering
 * upgrade installation process (create package?)
+* DNSweeper has poor performance when running in VMware. See [this](https://github.com/saghul/aiodns/issues/51) issue.
 
 ## Contribution
 
