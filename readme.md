@@ -327,11 +327,41 @@ results/
   ...
 ```
 
+## Linux optimization
+
+In order to get DNSweeper working properly you should tune-up your OS so that it can handle thousands of outgoing TCP connections reliably.
+
+Edit `/etc/security/limits.conf` file by adding
+
+```
+<your_username> 		soft     	nofile		65535
+<your_username> 		hard     	nofile		65535
+```
+
+Allow reusing sockets in TIME_WAIT state ([reference](http://lxr.linux.no/#linux+v3.2.8/Documentation/networking/ip-sysctl.txt#L464))
+
+`$ sysctl net.ipv4.tcp_tw_reuse=1`
+
+Reduce time to hold socket ([reference](http://lxr.linux.no/#linux+v3.2.8/Documentation/networking/ip-sysctl.txt#L196))
+
+`$ sysctl net.ipv4.tcp_fin_timeout=30`
+
+Increase local port range that is used by TCP and UDP to choose the local port
+
+`$ sysctl net.ipv4.ip_local_port_range="15000 61000"` ([reference](http://lxr.linux.no/#linux+v3.2.8/Documentation/networking/ip-sysctl.txt#L591))
+
+You might need restart your system after making these changes. To check if you can run enough concurrent TCP connections run
+
+`$ ulimit -Hn`
+
+which should be > 25000.
+
 ## ToDo
 
 * optimize code for Windows (maximum count of opened file descriptors)
 * tune-up resolvers filtering - adding more filters, upgrade current filtering
 * upgrade installation process (create package?)
+* DNSweeper has poor performance when running in VMware. See [this](https://github.com/saghul/aiodns/issues/51) issue.
 
 ## Contribution
 
