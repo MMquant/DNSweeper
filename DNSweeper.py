@@ -1234,7 +1234,7 @@ class App(object):
 
         with open(file_name) as f:
 
-            if '[' in line:
+            if '[' in line[:2]:
                 self.simple_log('# Reading input from JSON file {}'.format(file_name), 1)
                 return json.load(f)
             else:
