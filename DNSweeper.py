@@ -309,7 +309,7 @@ class DNSweeper(object):
         public_resolvers_A_results = all_resolvers_A_results[len(data.TRUSTED_RESOLVERS):]
 
         # Extract A records from trusted resolvers
-        trusted_resolvers_A_records = DNSweeper.extract_A_records(trusted_resolvers_A_results)
+        trusted_resolvers_A_records = self.extract_A_records(trusted_resolvers_A_results)
         trusted_ips = {ip for record in trusted_resolvers_A_records for ip in record['A']}
         self.simple_log('# A records from trusted resolvers: {}'.format(trusted_ips), 1)
 
@@ -629,6 +629,46 @@ class DNSweeper(object):
                     self.simple_log('$ sudo sysctl -w kern.maxfiles=40000 '.format(new_limit), 0)
                     self.simple_log('$ sudo sysctl -w kern.maxfilesperproc=30000 '.format(new_limit), 0)
 
+    def extract_PTR_records(self, resolvers_PTR_results):
+
+        PTR_records = []
+        for arpa_ip in resolvers_PTR_results:
+
+            try:
+
+                if type(arpa_ip['result']) is not aiodns.error.DNSError:
+
+                    record = {
+                        'ip': DNSweeper.arpa_to_ip(arpa_ip['name']),
+                        'name': arpa_ip['result'].name
+                    }
+                    PTR_records.append(record)
+
+            except UnicodeError:
+
+                self.simple_log('### Unicode error in A records: {}'.format(arpa_ip), 3)
+
+        return PTR_records
+
+    def extract_A_records(self, resolvers_A_results):
+
+        A_records = []
+        for resolver in resolvers_A_results:
+
+            try:
+
+                if type(resolver['result']) is not aiodns.error.DNSError:
+                    record = {
+                        'name': resolver['name'],
+                        'A': DNSweeper.extract_A_record(resolver['result'])
+                    }
+                    A_records.append(record)
+
+            except UnicodeError:
+                self.simple_log('### Unicode error in A records: {}'.format(resolver), 3)
+
+        return A_records
+
     @staticmethod
     def remove_excluded_subdomains(subdomains, exclude):
 
@@ -654,21 +694,6 @@ class DNSweeper(object):
 
         # Filter uniq AS and filter out NA records. Warning: We are losing IPs here!
         return list({record['AS']:record for record in asn_records if record['AS'] != 'NA'}.values())
-
-    @staticmethod
-    def extract_PTR_records(resolvers_PTR_results):
-
-        PTR_records = []
-        for arpa_ip in resolvers_PTR_results:
-            if type(arpa_ip['result']) is not aiodns.error.DNSError:
-
-                record = {
-                    'ip': DNSweeper.arpa_to_ip(arpa_ip['name']),
-                    'name': arpa_ip['result'].name
-                }
-                PTR_records.append(record)
-
-        return PTR_records
 
     @staticmethod
     def ipv4_validate(ip):
@@ -708,20 +733,6 @@ class DNSweeper(object):
         return [record.host for record in resolvers_A_result]
 
     @staticmethod
-    def extract_A_records(resolvers_A_results):
-
-        A_records = []
-        for resolver in resolvers_A_results:
-            if type(resolver['result']) is not aiodns.error.DNSError:
-                record = {
-                    'name': resolver['name'],
-                    'A': DNSweeper.extract_A_record(resolver['result'])
-                }
-                A_records.append(record)
-
-        return A_records
-
-    @staticmethod
     def extract_names(A_records):
 
         out = []
@@ -733,7 +744,6 @@ class DNSweeper(object):
     @staticmethod
     def get_unique_A_records(A_records):
         return list({ip for record in A_records for ip in record['A']})
-
 
 
 class App(object):
@@ -1240,6 +1250,7 @@ class App(object):
             else:
                 self.simple_log('# Reading input from text file {}'.format(file_name), 1)
                 return [line.rstrip('\n') for line in f]
+
 
 if __name__ == '__main__':
 
