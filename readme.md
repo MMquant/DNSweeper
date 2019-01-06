@@ -81,7 +81,7 @@ Input domain directly
 
 **Custom payload file**
 
-`$ python3 DNSweeper.py enumerate -f scraped_subdomains.txt -p path/to/payload`
+`$ python3 DNSweeper.py enumerate -f scraped_subdomains.txt -p path/to/large_payload`
 
 **Custom output directory**
 
@@ -90,6 +90,10 @@ Input domain directly
 **Skip *bruteforce* and increase verbosity**
 
 `$ python3 DNSweeper.py enumerate -f scraped_subdomains.txt --no-bruteforce -v`
+
+**Feed out-of-scope subdomains to DNSweeper engine**
+
+`$ python3 DNSweeper.py enumerate -f scraped_subdomains.txt --exclude out_of_scope.txt -v`
 
 <br>
 
@@ -111,6 +115,10 @@ Input domain directly
 
 `$ python3 DNSweeper.py bruteforce -d testing_domain.com`
 
+**First simple bruteforce with `large_payload` then recursive bruteforce with `small_payload` with file as input**
+
+`$ python3 DNSweeper.py bruteforce -f scraped_subdomains.txt -p path/to/large_payload --bruteforce-recursive path/to/small_payload`
+
 <br>
 
 #### `forward_lookup`
@@ -131,8 +139,7 @@ Input domain directly
 
 `$ python3 DNSweeper.py asn_reverse_lookup -f ips.txt`
 
-**Use custom regexp to filter gathered PTR records. Filtered records are stored in**
-`result/asn_reverse_lookup_regex_ptr.json`
+**Use custom regexp to filter gathered PTR records. Filtered records are stored in `result/asn_reverse_lookup_regex_ptr.json`**
 
 `$ python3 DNSweeper.py asn_reverse_lookup -f ips.txt -r admin`
 
@@ -199,11 +206,25 @@ R/gov[0-9]*\.
 
 ```
 
+If you scraped subdomains such as
+
+```
+static1.test-domain.com
+static2.test-domain.com
+static3.test-domain.com
+...
+```
+You can improve DNSweeper performance by enumerating just one of these subdomains. Add following regex to your `--exclude` file
+
+`R/^(?!static1\.testing-domain\.com)(static[0-9]*\.testing-domain\.com)`
+
+This regex in `--exclude` file leaves `static1.test-domain.com` for further enumeration and matches other subdomains of the same type to be excluded.
+
 <br>
 
 #### `--bruteforce-recursive FILE`
 
-Bruteforce recursively and use payload from FILE. Default bruteforce wordlist or custom wordlist is not used here. Use smaller wordlist for recursive bruteforcing (5k-10k).
+Enable recursive bruteforce and use payload from FILE. Default simple bruteforce wordlist or `-p` custom wordlist is not used here. Use smaller wordlist for recursive bruteforce (5k-10k).
 
 <br>
 
@@ -371,7 +392,11 @@ Quit VMware completely and upgrade to the latest VMware virtual NIC by editing `
 * optimize code for Windows (maximum count of opened file descriptors)
 * tune-up resolvers filtering - adding more filters, upgrade current filtering
 * upgrade installation process (create package?)
-* DNSweeper has poor performance when running in VMware. See [this](https://github.com/saghul/aiodns/issues/51) issue.
+
+
+## Changelog
+
+* 2019-01-06	Bruteforce command accepts file input. Recursive bruteforce is performed even on scraped subdomains.
 
 ## Contribution
 

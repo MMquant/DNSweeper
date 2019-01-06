@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 # MIT License
 #
 # Copyright (c) 2018 Petr Javorik
@@ -114,11 +116,11 @@ class DNSweeper(object):
         }
 
         self.exclude_subdomains = []
+        self.scraped_subdomains = []
 
         # others
         self.public_resolvers_remote_source = PUBLIC_RESOLVERS_REMOTE_SOURCE
         self.public_resolvers_local_source = PUBLIC_RESOLVERS_LOCAL_SOURCE
-
 
     ################################################################################
     # CORE
@@ -139,7 +141,7 @@ class DNSweeper(object):
             except aiodns.error.DNSError as e:
                 result = e
 
-            return {'ns': nameserver,'name': name ,'type': query_type, 'result': result}
+            return {'ns': nameserver, 'name': name, 'type': query_type, 'result': result}
 
     @staticmethod
     async def _query_sweep_names(name, query_type, resolver):
@@ -173,7 +175,8 @@ class DNSweeper(object):
             elapsed_time = end - start
 
             request_count = len(coros)
-            self.simple_log('## Event loop finished {} requests in {:.1f} seconds'.format(request_count, elapsed_time), 2)
+            self.simple_log('## Event loop finished {} requests in {:.1f} seconds'.format(request_count, elapsed_time),
+                            2)
             self.simple_log('## which is {:.1f} requests per second'.format(request_count / elapsed_time), 2)
 
         elif sweep_mode == 'names':
@@ -209,7 +212,8 @@ class DNSweeper(object):
                 for i in range(0, len(l), n):
                     yield l[i:i + n]
 
-            chunk_size = len(resolvers) - RESOLVERS_SWEEP_RESERVE if len(resolvers) > RESOLVERS_SWEEP_RESERVE else len(resolvers)
+            chunk_size = len(resolvers) - RESOLVERS_SWEEP_RESERVE if len(resolvers) > RESOLVERS_SWEEP_RESERVE else len(
+                resolvers)
             self.simple_log('## Calculated chunk_size: {}'.format(chunk_size), 2)
             chunk_list = list(chunks(names, chunk_size))
             self.simple_log('## Calculated chunk_size list length: {}'.format(len(chunk_list)), 2)
@@ -217,7 +221,6 @@ class DNSweeper(object):
             requests_processed = 0
             outer_start = time.time()
             for chunk in chunk_list:
-
                 coros = [self._query_sweep_names(name, query_type, resolver) for name in chunk]
                 tasks = asyncio.gather(*coros, return_exceptions=True)
 
@@ -229,7 +232,8 @@ class DNSweeper(object):
                 elapsed_time = end - start
 
                 request_count = len(coros)
-                self.simple_log('## Chunk event loop finished {} requests in {:.1f} seconds'.format(request_count, elapsed_time), 2)
+                self.simple_log(
+                    '## Chunk event loop finished {} requests in {:.1f} seconds'.format(request_count, elapsed_time), 2)
                 self.simple_log('## which is {:.1f} requests per second'.format(request_count / elapsed_time), 2)
 
                 requests_processed += request_count
@@ -264,7 +268,8 @@ class DNSweeper(object):
                     if all(_filter):
                         reliable_resolvers.append(resolver[0])
 
-            self.simple_log('### {} public resolvers with reliability >= {}'.format(len(reliable_resolvers), min_reliability), 3)
+            self.simple_log(
+                '### {} public resolvers with reliability >= {}'.format(len(reliable_resolvers), min_reliability), 3)
             return reliable_resolvers
 
         # Param validation
@@ -323,7 +328,7 @@ class DNSweeper(object):
                     public_verified_resolvers.append(resolver['ns'])
                 else:
                     self.simple_log('# Resolver {} returned A records {} which are not in trusted resolvers A records'.
-                                format(resolver['ns'], A_records), 1)
+                                    format(resolver['ns'], A_records), 1)
 
         # Merge public and trusted resolvers and remove duplicates.
         all_verified_resolvers = set(public_verified_resolvers + data.TRUSTED_RESOLVERS)
@@ -367,7 +372,8 @@ class DNSweeper(object):
             for record in records:
                 if type(record['result']) is not aiodns.error.DNSError:
                     A_records = self.extract_A_record(record['result'])
-                    self.simple_log('## Resolver {} resolves {} to {}'.format(record['ns'], random_subdomain, A_records), 2)
+                    self.simple_log(
+                        '## Resolver {} resolves {} to {}'.format(record['ns'], random_subdomain, A_records), 2)
                     bad_resolvers.append(record['ns'])
             resolvers.difference_update(bad_resolvers)
 
@@ -455,10 +461,16 @@ class DNSweeper(object):
 
     def bruteforce_recursive(self, domains, payload, resolvers):
 
-        for domain in domains:
+        filtered_domains = self.remove_excluded_subdomains(domains, self.exclude_subdomains)
+        for domain in filtered_domains:
             self.simple_log('# Performing recursive bruteforce on {}'.format(domain), 1)
             result = self.bruteforce(domain, payload, resolvers)
-            domains.extend(self.extract_names(result))
+            names = self.extract_names(result)
+            # Prevent duplicates if scraped subdomains contain mix of 1st, 2nd, 3rd, ... level domains.
+            for name in names:
+                if name not in filtered_domains:
+                    filtered_domains.extend(names)
+                    domains.extend(names)
 
     ################################################################################
     # HELPERS
@@ -576,7 +588,6 @@ class DNSweeper(object):
 
             return data_json
 
-
         ips = list(set(ips))
         for ip in ips:
             if not self.ipv4_validate(ip):
@@ -598,7 +609,6 @@ class DNSweeper(object):
                 rlimit_nofile_soft, rlimit_nofile_hard), 3)
 
             if rlimit_nofile_soft < RLIMIT_NOFILE_TEMP:
-
                 new_limit = RLIMIT_NOFILE_TEMP if RLIMIT_NOFILE_TEMP < rlimit_nofile_hard else rlimit_nofile_hard
                 resource.setrlimit(resource.RLIMIT_NOFILE, (new_limit, rlimit_nofile_hard))
                 self.simple_log('### Maximum number of opened file descriptors temporarily set to: {}'.format(
@@ -607,8 +617,8 @@ class DNSweeper(object):
         if platform.system() == 'Darwin':
 
             # Kernel limits
-            kern_maxfilesperproc =  subprocess.check_output(["sysctl", "kern.maxfilesperproc"])
-            kern_maxfilesperproc =  int(kern_maxfilesperproc.decode().rstrip().split(':')[1].strip())
+            kern_maxfilesperproc = subprocess.check_output(["sysctl", "kern.maxfilesperproc"])
+            kern_maxfilesperproc = int(kern_maxfilesperproc.decode().rstrip().split(':')[1].strip())
             self.simple_log('### Maximum number of opened file descriptors by kernel: {}'.format(
                 kern_maxfilesperproc), 3)
 
@@ -616,7 +626,6 @@ class DNSweeper(object):
             (rlimit_nofile_soft, rlimit_nofile_hard) = resource.getrlimit(resource.RLIMIT_NOFILE)
             self.simple_log('### Maximum number of opened file descriptors by ulimit (Soft, Hard): {}, {}'.format(
                 rlimit_nofile_soft, rlimit_nofile_hard), 3)
-
 
             if rlimit_nofile_soft < RLIMIT_NOFILE_TEMP:
                 new_limit = RLIMIT_NOFILE_TEMP if RLIMIT_NOFILE_TEMP < kern_maxfilesperproc else kern_maxfilesperproc
@@ -644,7 +653,7 @@ class DNSweeper(object):
                     }
                     PTR_records.append(record)
 
-            except UnicodeError:
+            except TypeError:
 
                 self.simple_log('### Unicode error in A records: {}'.format(arpa_ip), 3)
 
@@ -664,8 +673,8 @@ class DNSweeper(object):
                     }
                     A_records.append(record)
 
-            except UnicodeError:
-                self.simple_log('### Unicode error in A records: {}'.format(resolver), 3)
+            except TypeError:
+                self.simple_log('### TypeError error in A records: {}'.format(resolver), 3)
 
         return A_records
 
@@ -759,6 +768,8 @@ class App(object):
         self.dnsw.args.update(vars(self.args))
         if self.dnsw.args['exclude_file']:
             self.dnsw.exclude_subdomains = self.read_file(self.dnsw.args['exclude_file'])
+        if self.dnsw.args['file_input']:
+            self.dnsw.scraped_subdomains = self.read_file(self.dnsw.args['file_input'])
 
         # Cache
         self.filtered_resolvers = []
@@ -796,15 +807,15 @@ class App(object):
                                                              'in all IPs from discovered ASN netblocks and optionally '
                                                              'filters output with given REGEX.')
         parser_enumerate.set_defaults(func=self.enumerate)
-        input_group = parser_enumerate.add_mutually_exclusive_group(required=True)
-        input_group.add_argument('-f',
-                                 metavar='FILE',
-                                 help='Path to file with (scraped) subdomains',
-                                 dest='file_input')
-        input_group.add_argument('-d',
-                                 metavar='DOMAIN',
-                                 help='Domain (ie. test_domain.com)',
-                                 dest='domain_input')
+        input_group_enumerate = parser_enumerate.add_mutually_exclusive_group(required=True)
+        input_group_enumerate.add_argument('-f',
+                                           metavar='FILE',
+                                           help='Path to file with (scraped) subdomains',
+                                           dest='file_input')
+        input_group_enumerate.add_argument('-d',
+                                           metavar='DOMAIN',
+                                           help='Domain (ie. test_domain.com)',
+                                           dest='domain_input')
         parser_enumerate.add_argument('-p',
                                       metavar='FILE',
                                       help='Path to file with bruteforce payload',
@@ -897,11 +908,15 @@ class App(object):
                                                               'permanently rotated - each new query is resolved with '
                                                               'different resolver. Payload is mangled with -i input.')
         parser_bruteforce.set_defaults(func=self.bruteforce)
-        parser_bruteforce.add_argument('-d',
-                                       metavar='DOMAIN',
-                                       help='Domain or subdomain',
-                                       required=True,
-                                       dest='domain_input')
+        input_group_bruteforce = parser_bruteforce.add_mutually_exclusive_group(required=True)
+        input_group_bruteforce.add_argument('-f',
+                                            metavar='FILE',
+                                            help='Path to file with (scraped) subdomains',
+                                            dest='file_input')
+        input_group_bruteforce.add_argument('-d',
+                                            metavar='DOMAIN',
+                                            help='Domain (ie. test_domain.com)',
+                                            dest='domain_input')
         parser_bruteforce.add_argument('-p',
                                        metavar='FILE',
                                        help='Path to file with bruteforce payload',
@@ -926,12 +941,17 @@ class App(object):
                                        metavar='FILE',
                                        required=False,
                                        dest='bruteforce_recursive')
+        parser_bruteforce.add_argument('--exclude',
+                                       help='File with subdomains which not to use in recursive bruteforce. '
+                                            '(improves speed)',
+                                       metavar='FILE',
+                                       required=False,
+                                       dest='exclude_file')
         parser_bruteforce.add_argument('-v',
                                        help='Verbosity, -v, -vv, -vvv',
                                        action='count',
                                        default=0,
                                        dest='verbosity')
-
 
         ################################################################################
         # forward_lookup command parser
@@ -1074,11 +1094,19 @@ class App(object):
         bruteforce_subdomains = self.dnsw.extract_names(bruteforce_records)
 
         if self.dnsw.args['bruteforce_recursive']:
+            self.simple_log('# Performing recursive bruteforce ...', 1)
             payload = self.read_file(self.dnsw.args['bruteforce_recursive'])
+            if self.dnsw.scraped_subdomains:
+                self.simple_log('# Merging scraped subdomains with simple bruteforce result ...', 1)
+                bruteforce_subdomains.extend(self.dnsw.scraped_subdomains)
+                bruteforce_subdomains = list(set(bruteforce_subdomains))
+
             self.dnsw.bruteforce_recursive(bruteforce_subdomains, payload, self.filtered_resolvers)
+        bruteforce_subdomains = list(set(bruteforce_subdomains))
 
         # Output
-        self.simple_log('Bruteforce discovered {} subdomains...'.format(len(bruteforce_subdomains)), 0)
+        self.simple_log('Bruteforce discovered {} new subdomains...'.format(
+            len(bruteforce_subdomains) - len(self.dnsw.scraped_subdomains)), 0)
         file_name = os.path.join(self.dnsw.args['output_dir'], 'bruteforce_result.json')
         self.write_file(file_name, bruteforce_subdomains)
 
@@ -1092,13 +1120,13 @@ class App(object):
         self.simple_log('Performing forward-lookup...', 0)
         self.load_resolvers()
 
-        subdomains = []
-        if self.dnsw.args['file_input']:
-            subdomains = self.read_file(self.dnsw.args['file_input'])
         if self.bruteforce_result:
-            self.simple_log('# Extending input with previously bruteforced subdomains...', 1)
-            subdomains.extend(self.bruteforce_result)
-            subdomains = list(set(subdomains))
+            # Scraped subdomains already included in bruteforce_result!
+            subdomains = self.bruteforce_result
+            self.simple_log('# Performing forward-loopkup on previous bruteforce result...', 1)
+        else:
+            subdomains = self.dnsw.scraped_subdomains
+            self.simple_log('# Performing forward-loopkup on scraped subdomains...', 1)
 
         if self.dnsw.args['fast_sweep']:
             A_records = self.dnsw.forward_lookup_fast(subdomains, self.filtered_resolvers)
@@ -1208,10 +1236,8 @@ class App(object):
 
         if self.dnsw.args['domain_input']:
             domain_name = self.dnsw.args['domain_input']
-        elif self.dnsw.args['file_input']:
-            with open(self.dnsw.args['file_input']) as f:
-                domain_name = f.readline().strip('\n')
-                domain_name = '.'.join(domain_name.split('.')[-2:])
+        elif self.dnsw.scraped_subdomains:
+            domain_name = '.'.join(self.dnsw.scraped_subdomains[0].split('.')[-2:])
         else:
             raise ValueError('domain_input or file_input missing')
 
@@ -1253,6 +1279,5 @@ class App(object):
 
 
 if __name__ == '__main__':
-
     app = App()
     app.run_command()
