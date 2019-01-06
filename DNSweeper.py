@@ -646,6 +646,7 @@ class DNSweeper(object):
             try:
 
                 if type(arpa_ip['result']) is not aiodns.error.DNSError:
+
                     record = {
                         'ip': DNSweeper.arpa_to_ip(arpa_ip['name']),
                         'name': arpa_ip['result'].name
@@ -701,7 +702,7 @@ class DNSweeper(object):
     def get_uniq_asns(asn_records):
 
         # Filter uniq AS and filter out NA records. Warning: We are losing IPs here!
-        return list({record['AS']: record for record in asn_records if record['AS'] != 'NA'}.values())
+        return list({record['AS']:record for record in asn_records if record['AS'] != 'NA'}.values())
 
     @staticmethod
     def ipv4_validate(ip):
