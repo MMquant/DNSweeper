@@ -58,7 +58,7 @@ RLIMIT_NOFILE_TEMP = 25000
 ## DEFAULTS
 # DNSresolver will use just public resolvers with minimum reliability >= MIN_RELIABILITY
 # More details on https://public-dns.info
-MIN_RELIABILITY = '1.00'
+MIN_RELIABILITY = '0.60'
 SWEEP_MODES = ['resolvers', 'names']
 RESOLVERS_SWEEP_RESERVE = 50
 
@@ -260,9 +260,9 @@ class DNSweeper(object):
             # extract resolvers only with reliability > min_reliability
             reliable_resolvers = []
             for resolver in public_resolvers[1:]:
-                if len(resolver) == 10:
+                if len(resolver) == 12:
                     _filter = [
-                        float(resolver[7]) >= float(min_reliability),
+                        float(resolver[9]) >= float(min_reliability),
                         DNSweeper.ipv4_validate(resolver[0])
                     ]
                     if all(_filter):
